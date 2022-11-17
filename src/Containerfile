@@ -1,0 +1,32 @@
+FROM scratch AS base
+
+ARG ARCH
+
+WORKDIR /
+
+ADD build/bootstrap.$ARCH.tar /
+
+RUN pacman-key --init
+RUN pacman-key --populate
+
+RUN --mount=type=bind,source=cache/pkg,destination=/var/cache/pacman/pkg \
+    --mount=type=bind,source=build/base.$ARCH.pkgs,destination=/pkgs \
+    cat /pkgs | \
+    xargs pacman --noconfirm --sync --refresh --sysupgrade
+
+# deleted after mount done
+RUN install --mode 0755 --directory /var/cache/pacman/pkg
+
+# sticky bit isn't preserved;
+# see https://github.com/containers/buildah/issues/4427
+RUN chmod +t /tmp /var/spool/mail /var/tmp
+
+# /proc and /sys are interpreted as being owned by nobody, so, we can't rely on
+# the exit status to tell us that nothing is wrong;
+# see https://github.com/containers/podman/issues/16557
+RUN pacman --query --check --check 2>&1 | \
+    grep --extended-regexp --invert-match '/(proc|sys)|0 altered files' | \
+    tee /dev/stderr | \
+    grep warning
+
+CMD ["/usr/bin/bash"]

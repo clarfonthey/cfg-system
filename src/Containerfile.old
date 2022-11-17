@@ -1,0 +1,173 @@
+FROM scratch as base-aarch64
+
+WORKDIR /
+
+RUN --mount=type=bind,source=/var/cache/pacman/pkg,destination=/var/cache/pacman/pkg
+
+COPY
+
+FROM scratch AS base-x86_64
+
+WORKDIR /
+
+RUN --mount=type=bind,source=/var/cache/pacman/pkg,destination=/var/cache/pacman/pkg
+
+COPY pkg/archlinux/x86_64_64/ltdk-pacman*.pkg.tar.zst /tmp/
+RUN pacman -U /tmp/ltdk-pacman* --noconfirm && rm /tmp/ltdk-pacman*
+
+COPY \
+    tmp/bin/paci \
+    tmp/bin/pacs \
+    /tmp/bin/
+
+RUN /tmp/bin/paci && \
+    yes | /tmp/bin/pacs iptables-nft --confirm
+
+CMD ["/usr/bin/bash"]
+
+FROM base-x86_64 AS pub-x86_64
+
+LABEL org.opencontainers.image.authors="ltdk <usr@ltdk.xyz>"
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.licenses="ACSL"
+LABEL org.opencontainers.image.ref.name="pub.cld.ltdk.xyz"
+LABEL org.opencontainers.image.title="pub.cld.ltdk.xyz"
+LABEL org.opencontainers.image.description="Public image for cld.ltdk.xyz"
+
+WORKDIR /
+
+COPY \
+    tmp/bin/pacu \
+    /tmp/bin/
+COPY pkgs /tmp/pkgs
+COPY pkg/archlinux/x86_64_64/* pkg/archlinux/any/*.pkg.tar.zst /srv/http/dl/pkg/archlinux/x86_64_64/
+COPY pkg/aur/x86_64_64/* pkg/aur/any/*.pkg.tar.zst /srv/http/dl/pkg/aur/x86_64_64/
+RUN pacman -Syy
+RUN /tmp/bin/pacs $(cat /tmp/pkgs)
+RUN rm /boot/initramfs-linux-hardened.img
+
+COPY bin/ /usr/local/bin
+COPY etc/ /usr/local/etc
+COPY lib/ /usr/local/lib
+
+COPY tmp/bin/zfs /tmp/bin/zfs
+COPY disk/ tmp/disk
+RUN /tmp/bin/zfs root r
+RUN /tmp/bin/zfs data d
+
+RUN systemd-firstboot \
+        --delete-root-password \
+        --keymap=colemak \
+        --locale=en_US.UTF-8 \
+        --root-shell=/usr/bin/fish \
+        --timezone=America/New_York
+
+COPY units/ tmp/units
+RUN systemctl mask $(cat /tmp/units/mask)
+RUN systemctl enable $(cat /tmp/units/system)
+RUN systemctl enable --global $(cat /tmp/units/user)
+
+RUN systemd-sysusers && \
+    systemd-tmpfiles --create \
+        --exclude-prefix=/dev \
+        --exclude-prefix=/proc \
+        --exclude-prefix=/sys
+
+COPY tmp/bin/usr /tmp/bin/usr
+RUN /tmp/bin/usr
+RUN systemd-tmpfiles --create \
+        --exclude-prefix=/dev \
+        --exclude-prefix=/proc \
+        --exclude-prefix=/sys
+
+COPY tmp/bin/pam /tmp/bin
+RUN /tmp/bin/pam
+COPY tmp/bin/skel /tmp/bin/
+RUN /tmp/bin/skel /root
+RUN useradd -g users -G ssh,wheel -m -k /usr/local/etc/skel -s /usr/bin/fish ltdk
+RUN chsh -s /usr/bin/fish root
+RUN /tmp/bin/skel /home/ltdk
+
+RUN /usr/local/bin/update-addrs local
+
+COPY tmp/bin/pacd /tmp/bin/
+RUN /tmp/bin/pacd
+RUN rm -rf /tmp/bin /tmp/disk /tmp/pkg
+RUN systemd-tmpfiles --clean \
+    --exclude-prefix=/dev \
+    --exclude-prefix=/proc \
+    --exclude-prefix=/sys
+
+WORKDIR /root
+CMD ["/usr/bin/fish"]
+
+# ---
+
+FROM pub-x86_64 as priv-x86_64
+
+LABEL org.opencontainers.image.authors="ltdk <usr@ltdk.xyz>"
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.licenses="ACSL"
+LABEL org.opencontainers.image.ref.name="priv.cld.ltdk.xyz"
+LABEL org.opencontainers.image.title="priv.cld.ltdk.xyz"
+LABEL org.opencontainers.image.description="Private image for cld.ltdk.xyz"
+
+WORKDIR /
+
+RUN zgenhostid
+RUN mkinitcpio -P
+
+RUN rotate-keys-pacman
+RUN ltdk-sshdgenkeys ensure
+
+USER gitea
+RUN rotate-keys-gitea
+
+USER smtpd
+RUN echo ltdk1 > /var/key/smtpd/pub/dkim.selector
+RUN rotate-keys-dkim
+RUN rotate-keys-srs
+
+USER acme
+RUN dehydrated --register --accept-terms
+
+USER postgres
+RUN initdb -D /var/lib/postgres/data
+RUN cp -R /usr/local/etc/postgres -T /var/lib/postgres/data
+COPY tmp/bin/postgres /tmp/bin/
+RUN /tmp/bin/postgres
+
+USER root
+RUN systemctl start rabbitmq
+
+USER rabbitmq
+COPY tmp/bin/rabbit /tmp/bin
+RUN /tmp/bin/rabbit
+
+USER root
+RUN systemctl stop rabbitmq
+
+USER acme
+
+COPY tmp/bin/tls /tmp/bin/
+RUN /tmp/bin/tls
+
+USER root
+
+RUN rm -rf /tmp/bin
+
+COPY priv/hcaptcha.ini    /var/key/gitea/
+COPY priv/authorized_keys /var/key/ssh/
+COPY priv/oath priv/u2f   /var/key/pam/
+
+COPY priv/chpasswd /tmp/chpasswd
+RUN cat /tmp/chpasswd | chpasswd
+RUN rm /tmp/chpasswd
+
+RUN systemd-tmpfiles --clean \
+    --exclude-prefix=/dev \
+    --exclude-prefix=/proc \
+    --exclude-prefix=/sys
+
+WORKDIR /root
+CMD ["/usr/bin/fish"]

@@ -1,0 +1,15 @@
+./dev
+./etc/hostname
+./etc/machine-id
+./etc/resolv.conf
+./proc
+./root/*
+./sys
+./tmp/*
+./var/cache/pacman/pkg/*
+./var/key/pacman/openpgp-revocs.d/*
+./var/key/pacman/private-keys-v1.d/*
+./var/key/pacman/pubring.gpg~
+./var/key/pacman/S.*
+./var/lib/pacman/sync/*
+./var/tmp/*

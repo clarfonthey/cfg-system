@@ -1,0 +1,13 @@
+[options]
+Architecture = aarch64
+GPGDir = /var/key/pacman
+SigLevel = Required DatabaseOptional
+LocalFileSigLevel = Optional
+[core]
+Server = http://mirror.archlinuxarm.org/$arch/$repo
+[extra]
+Server = http://mirror.archlinuxarm.org/$arch/$repo
+[community]
+Server = http://mirror.archlinuxarm.org/$arch/$repo
+[alarm]
+Server = http://mirror.archlinuxarm.org/$arch/$repo
