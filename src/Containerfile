@@ -11,8 +11,7 @@ RUN pacman-key --populate
 
 RUN --mount=type=bind,source=cache/pkg,destination=/var/cache/pacman/pkg \
     --mount=type=bind,source=build/base.$ARCH.pkgs,destination=/pkgs \
-    cat /pkgs | \
-    xargs pacman --noconfirm --sync --refresh --sysupgrade
+    sed -e 's/#.*//' /pkgs | xargs pacman --noconfirm --sync --refresh --sysupgrade
 
 # deleted after mount done
 RUN install --mode 0755 --directory /var/cache/pacman/pkg
@@ -29,4 +28,33 @@ RUN pacman --query --check --check 2>&1 | \
     tee /dev/stderr | \
     grep warning
 
-CMD ["/usr/bin/bash"]
+ARG TIMEZONE=America/New_York
+ARG SHELL=/usr/bin/fish
+ARG KEYMAP=colemak
+ARG LOCALE=en_US
+
+RUN sed -re "s/^#($LOCALE[. ]UTF-8|C[. ])/\1/" -i /etc/locale.gen && locale-gen
+
+RUN systemd-firstboot \
+    --delete-root-password \
+    --keymap=$KEYMAP \
+    --locale=$LOCALE.UTF-8 \
+    --root-shell=$SHELL \
+    --timezone=$TIMEZONE
+
+RUN --mount=type=bind,source=build/mask.$ARCH.units,destination=/units.mask \
+    --mount=type=bind,source=build/system.$ARCH.units,destination=/units.system \
+    --mount=type=bind,source=build/user.$ARCH.units,destination=/units.user \
+    sed -e 's/#.*//' /units.mask | xargs --no-run-if-empty systemctl mask && \
+    sed -e 's/#.*//' /units.system | xargs --no-run-if-empty systemctl enable && \
+    sed -e 's/#.*//' /units.user | xargs --no-run-if-empty systemctl enable --global
+
+RUN --mount=type=bind,source=src/pacnew.bash,destination=/pacnew /pacnew
+
+RUN systemd-sysusers && \
+    systemd-tmpfiles --create \
+        --exclude-prefix=/dev \
+        --exclude-prefix=/proc \
+        --exclude-prefix=/sys
+
+CMD [$SHELL]

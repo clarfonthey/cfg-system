@@ -1,18 +1,87 @@
 base
 base-devel
+bat
+bzip2
+choose
+cpio
+curl
 efibootmgr
+eva
+exa
+fd
 fish
+fuse2
+git
+gzip
+jq
+kakoune
+lfs
+lha
 libvirt
+lsof
+lzop
+make
 man-db
 man-pages
+nano
 nftables
 oath-toolkit
 opensc
 openssh
+p7zip
+pacman
 pacman-contrib
 pam-u2f
 pkgfile
 python-dotenv
 ripgrep
 rng-tools
+rsync
+sd
+tar
 texinfo
+unrar
+unzip
+vim
+xz
+yq
+zip
+
+# dehydrated
+# dnsmasq
+# funkwhale
+# gitea
+# grub
+# grub-holdshift
+# kanboard
+# laymap
+# ltdk-aliases
+# ltdk-mkvirtinitcpio
+# ltdk-pacman
+# ltdk-postgresql
+# ltdk-prompt
+# ltdk-ssh
+# miniflux
+# mustach
+# nginx-mainline
+# nginx-mainline-mod-brotli
+# opensmtpd
+# opensmtpd-filter-dkimsign
+# openssh
+# ouch
+# php-fpm
+# php-pgsql
+# postgresql
+# qemu-base
+# qemu-emulators-full
+# rabbitmq
+# rm-improved
+# systemd-zpool-scrub
+# viro
+# woodpecker-agent
+# woodpecker-cli
+# woodpecker-server
+# writefreely
+# yay
+# zfs-linux-hardened
+# zrepl

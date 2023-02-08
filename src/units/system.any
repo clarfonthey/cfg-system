@@ -1,0 +1,36 @@
+# funkwhale-beat.service
+# funkwhale-worker.service
+nftables.service
+# nginx.service
+# php-fpm.service
+# postgresql.service
+# redis@funkwhale.service
+# redis@gitea.service
+rngd.service
+sshd.service
+systemd-networkd.service
+systemd-oomd.service
+systemd-pstore.service
+systemd-resolved.service
+systemd-timesyncd.service
+# writefreely.service
+# zfs-import-scan.service
+# zfs-mount.service
+# zfs-zed.service
+# zrepl.service
+
+# funkwhale-server.socket
+# gitea.socket
+libvirtd.socket
+# miniflux.socket
+# smtpd.socket
+
+# dehydrated.timer
+# kanboard.timer
+paccache.timer
+pkgfile-update.timer
+# zpool-scrub@d.timer
+# zpool-scrub@r.timer
+
+# zfs-import.target
+# zfs.target

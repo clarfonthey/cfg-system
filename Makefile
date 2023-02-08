@@ -53,11 +53,23 @@ build/bootstrap.%.pkgs: src/pkgs/bootstrap.any src/pkgs/bootstrap.%
 	cat src/pkgs/bootstrap.any src/pkgs/bootstrap.$* | \
 		sort -u > build/bootstrap.$*.pkgs
 
-build/base.%.pkgs: build/bootstrap.%.pkgs src/pkgs/base.any src/pkgs/base.%
+build/base.%.pkgs: src/pkgs/base.any src/pkgs/base.% build/bootstrap.%.pkgs
 	cat build/bootstrap.$*.pkgs src/pkgs/base.any src/pkgs/base.$* | \
 		sort -u > build/base.$*.pkgs
 
-build/base.%.tar: build/base.%.pkgs src/Containerfile build/bootstrap.%.tar
+build/mask.%.units: src/units/mask.any src/units/mask.%
+	cat src/units/mask.any src/units/mask.$* | \
+		sort -u > build/mask.$*.units
+
+build/system.%.units: src/units/system.any src/units/system.%
+	cat src/units/system.any src/units/system.$* | \
+		sort -u > build/system.$*.units
+
+build/user.%.units: src/units/user.any src/units/user.%
+	cat src/units/user.any src/units/user.$* | \
+		sort -u > build/user.$*.units
+
+build/base.%.tar: src/Containerfile src/pacnew.bash build/base.%.pkgs build/mask.%.units build/system.%.units build/user.%.units build/bootstrap.%.tar
 	podman build --file src/Containerfile --build-arg ARCH=$* . | \
 		tee /dev/stderr | \
 		tail -n 1 | \
